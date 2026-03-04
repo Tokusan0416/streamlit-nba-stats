@@ -6,6 +6,9 @@ dist/
 wheels/
 *.egg-info
 
+# Jupyter Notebook
+notebook/
+
 # Virtual environments
 .venv
 
