@@ -50,21 +50,21 @@ try:
     with col1:
         with st.spinner(''):
             total_players = client.query(
-                "SELECT COUNT(DISTINCT PLAYER_NAME) as count FROM `nba_stats.player_season_stats`"
+                "SELECT COUNT(DISTINCT PLAYER_NAME) as count FROM `nba_stats.fact_player_season_stats`"
             ).to_dataframe()
             st.metric("Total Players", f"{total_players['count'].iloc[0]:,}")
 
     with col2:
         with st.spinner(''):
             total_seasons = client.query(
-                "SELECT COUNT(DISTINCT SEASON_ID) as count FROM `nba_stats.player_season_stats`"
+                "SELECT COUNT(DISTINCT SEASON) as count FROM `nba_stats.fact_player_season_stats`"
             ).to_dataframe()
             st.metric("Total Seasons", f"{total_seasons['count'].iloc[0]:,}")
 
     with col3:
         with st.spinner(''):
             total_records = client.query(
-                "SELECT COUNT(*) as count FROM `nba_stats.player_season_stats`"
+                "SELECT COUNT(*) as count FROM `nba_stats.fact_player_season_stats`"
             ).to_dataframe()
             st.metric("Total Records", f"{total_records['count'].iloc[0]:,}")
 
@@ -74,14 +74,14 @@ try:
     sample_query = """
         SELECT
             PLAYER_NAME,
-            SEASON_ID,
+            SEASON,
             TEAM_ABBREVIATION,
             GP,
             PTS,
             AST,
             REB
-        FROM `nba_stats.player_season_stats`
-        ORDER BY SEASON_ID DESC
+        FROM `nba_stats.fact_player_season_stats`
+        ORDER BY SEASON DESC
         LIMIT 10
     """
 
@@ -102,6 +102,6 @@ st.markdown("""
 ---
 ### Data Source
 
-- BigQuery Dataset: `nba_stats.player_season_stats`
+- BigQuery Dataset: `nba_stats.fact_player_season_stats`
 - Data is updated regularly
 """)

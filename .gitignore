@@ -15,5 +15,14 @@ notebook/
 # BigQuery Credential
 secrets.toml
 
+# Environment variables (contains project IDs, table names, etc.)
+.env
+.env.local
+.env.*.local
+
+# Data pipeline logs
+*.log
+scripts/data_pipeline/jobs/*.log
+
 # Memo
 IMPROVEMENTS.md

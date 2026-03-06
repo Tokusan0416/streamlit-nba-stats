@@ -21,12 +21,12 @@ client = get_bigquery_client()
 @st.cache_data(ttl=3600)
 def get_seasons():
     query = """
-        SELECT DISTINCT SEASON_ID
-        FROM `nba_stats.player_season_stats`
-        ORDER BY SEASON_ID DESC
+        SELECT DISTINCT SEASON
+        FROM `nba_stats.fact_player_season_stats`
+        ORDER BY SEASON DESC
     """
     df = client.query(query).to_dataframe()
-    return df['SEASON_ID'].tolist()
+    return df['SEASON'].tolist()
 
 # Get ranking data
 @st.cache_data(ttl=600)
@@ -41,8 +41,8 @@ def get_rankings(season, stat, min_games=20, limit=50):
                 WHEN @stat = 'FG_PCT' OR @stat = 'FG3_PCT' OR @stat = 'FT_PCT' THEN {stat} * 100
                 ELSE {stat}
             END as STAT_VALUE
-        FROM `nba_stats.player_season_stats`
-        WHERE SEASON_ID = @season
+        FROM `nba_stats.fact_player_season_stats`
+        WHERE SEASON = @season
             AND GP >= @min_games
             AND {stat} IS NOT NULL
         ORDER BY {stat} DESC

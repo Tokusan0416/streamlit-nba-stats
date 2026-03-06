@@ -28,14 +28,14 @@ def get_all_players(team=None, season=None):
         params.append(bigquery.ScalarQueryParameter("team", "STRING", team))
 
     if season and season != "All Seasons":
-        conditions.append("SEASON_ID = @season")
+        conditions.append("SEASON = @season")
         params.append(bigquery.ScalarQueryParameter("season", "STRING", season))
 
     where_clause = " AND ".join(conditions) if conditions else "1=1"
 
     query = f"""
         SELECT DISTINCT PLAYER_NAME
-        FROM `nba_stats.player_season_stats`
+        FROM `nba_stats.fact_player_season_stats`
         WHERE {where_clause}
         ORDER BY PLAYER_NAME
     """
@@ -49,7 +49,7 @@ def get_all_players(team=None, season=None):
 def get_all_teams():
     query = """
         SELECT DISTINCT TEAM_ABBREVIATION
-        FROM `nba_stats.player_season_stats`
+        FROM `nba_stats.fact_player_season_stats`
         WHERE TEAM_ABBREVIATION IS NOT NULL
         ORDER BY TEAM_ABBREVIATION
     """
@@ -60,19 +60,19 @@ def get_all_teams():
 @st.cache_data(ttl=3600)
 def get_all_seasons():
     query = """
-        SELECT DISTINCT SEASON_ID
-        FROM `nba_stats.player_season_stats`
-        ORDER BY SEASON_ID DESC
+        SELECT DISTINCT SEASON
+        FROM `nba_stats.fact_player_season_stats`
+        ORDER BY SEASON DESC
     """
     df = client.query(query).to_dataframe()
-    return ['All Seasons'] + df['SEASON_ID'].tolist()
+    return ['All Seasons'] + df['SEASON'].tolist()
 
 # Get player statistics
 @st.cache_data(ttl=600)
 def get_player_stats(player_name):
     query = f"""
         SELECT
-            SEASON_ID,
+            SEASON,
             TEAM_ABBREVIATION,
             AGE,
             GP,
@@ -95,9 +95,9 @@ def get_player_stats(player_name):
             DREB,
             TOV,
             PF
-        FROM `nba_stats.player_season_stats`
+        FROM `nba_stats.fact_player_season_stats`
         WHERE PLAYER_NAME = @player_name
-        ORDER BY SEASON_ID
+        ORDER BY SEASON
     """
     job_config = bigquery.QueryJobConfig(
         query_parameters=[
@@ -118,7 +118,7 @@ def get_filtered_stats(team=None, season=None):
         params.append(bigquery.ScalarQueryParameter("team", "STRING", team))
 
     if season and season != "All Seasons":
-        conditions.append("SEASON_ID = @season")
+        conditions.append("SEASON = @season")
         params.append(bigquery.ScalarQueryParameter("season", "STRING", season))
 
     where_clause = " AND ".join(conditions) if conditions else "1=1"
@@ -126,7 +126,7 @@ def get_filtered_stats(team=None, season=None):
     query = f"""
         SELECT
             PLAYER_NAME,
-            SEASON_ID,
+            SEASON,
             TEAM_ABBREVIATION,
             AGE,
             GP,
@@ -149,7 +149,7 @@ def get_filtered_stats(team=None, season=None):
             DREB,
             TOV,
             PF
-        FROM `nba_stats.player_season_stats`
+        FROM `nba_stats.fact_player_season_stats`
         WHERE {where_clause}
         ORDER BY PTS DESC
     """
@@ -258,7 +258,7 @@ try:
 
             # Display full data table
             st.subheader("📋 All Players Data")
-            display_cols = ['PLAYER_NAME', 'SEASON_ID', 'TEAM_ABBREVIATION', 'GP', 'MIN', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FG_PCT', 'FG3_PCT', 'FT_PCT']
+            display_cols = ['PLAYER_NAME', 'SEASON', 'TEAM_ABBREVIATION', 'GP', 'MIN', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FG_PCT', 'FG3_PCT', 'FT_PCT']
             display_df = filtered_df[display_cols].copy()
             display_df.columns = ['Player', 'Season', 'Team', 'Games', 'Min', 'Points', 'Rebounds', 'Assists', 'Steals', 'Blocks', 'FG%', '3P%', 'FT%']
 
@@ -292,7 +292,7 @@ try:
         if not stats_df.empty:
             # Apply season/team filters if selected
             if selected_season != "All Seasons":
-                stats_df = stats_df[stats_df['SEASON_ID'] == selected_season]
+                stats_df = stats_df[stats_df['SEASON'] == selected_season]
 
             if selected_team != "All Teams":
                 stats_df = stats_df[stats_df['TEAM_ABBREVIATION'] == selected_team]
@@ -308,7 +308,7 @@ try:
             with col1:
                 st.metric("Seasons", len(stats_df))
             with col2:
-                st.metric("Latest Season", latest_season['SEASON_ID'])
+                st.metric("Latest Season", latest_season['SEASON'])
             with col3:
                 st.metric("Avg Points", f"{stats_df['PTS'].mean():.1f}")
             with col4:
@@ -321,8 +321,8 @@ try:
                 st.subheader("Key Stats Trends by Season")
 
                 # Points, Assists, Rebounds
-                chart_data = stats_df[['SEASON_ID', 'PTS', 'AST', 'REB']].copy()
-                chart_data = chart_data.set_index('SEASON_ID')
+                chart_data = stats_df[['SEASON', 'PTS', 'AST', 'REB']].copy()
+                chart_data = chart_data.set_index('SEASON')
 
                 st.line_chart(
                     chart_data,
@@ -332,8 +332,8 @@ try:
 
                 # Shooting Percentages
                 st.subheader("Shooting Percentage Trends")
-                shooting_data = stats_df[['SEASON_ID', 'FG_PCT', 'FG3_PCT', 'FT_PCT']].copy()
-                shooting_data = shooting_data.set_index('SEASON_ID')
+                shooting_data = stats_df[['SEASON', 'FG_PCT', 'FG3_PCT', 'FT_PCT']].copy()
+                shooting_data = shooting_data.set_index('SEASON')
                 shooting_data.columns = ['FG%', '3P%', 'FT%']
 
                 st.line_chart(
@@ -385,9 +385,9 @@ try:
                         f"{stats_df['REB'].max():.1f}"
                     ],
                     'Season': [
-                        stats_df.loc[stats_df['PTS'].idxmax(), 'SEASON_ID'],
-                        stats_df.loc[stats_df['AST'].idxmax(), 'SEASON_ID'],
-                        stats_df.loc[stats_df['REB'].idxmax(), 'SEASON_ID']
+                        stats_df.loc[stats_df['PTS'].idxmax(), 'SEASON'],
+                        stats_df.loc[stats_df['AST'].idxmax(), 'SEASON'],
+                        stats_df.loc[stats_df['REB'].idxmax(), 'SEASON']
                     ]
                 })
                 st.table(best_stats)
